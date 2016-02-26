@@ -1,5 +1,5 @@
 /*
-* Fingerprintjs2 1.0.3 - Modern & flexible browser fingerprint library v2
+* Fingerprintjs2 1.1.1 - Modern & flexible browser fingerprint library v2
 * https://github.com/Valve/fingerprintjs2
 * Copyright (c) 2015 Valentin Vasilyev (valentin.vasilyev@outlook.com)
 * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
@@ -85,6 +85,7 @@
       keys = this.languageKey(keys);
       keys = this.colorDepthKey(keys);
       keys = this.screenResolutionKey(keys);
+      keys = this.availableScreenResolutionKey(keys);
       keys = this.timezoneOffsetKey(keys);
       keys = this.sessionStorageKey(keys);
       keys = this.localStorageKey(keys);
@@ -148,7 +149,6 @@
     },
     getScreenResolution: function(keys) {
       var resolution;
-      var available;
       if(this.options.detectScreenOrientation) {
         resolution = (screen.height > screen.width) ? [screen.height, screen.width] : [screen.width, screen.height];
       } else {
@@ -157,6 +157,16 @@
       if(typeof resolution !== "undefined") { // headless browsers
         keys.push({key: "resolution", value: resolution});
       }
+      return keys;
+    },
+    availableScreenResolutionKey: function(keys) {
+      if (!this.options.excludeAvailableScreenResolution) {
+        return this.getAvailableScreenResolution(keys);
+      }
+      return keys;
+    },
+    getAvailableScreenResolution: function(keys) {
+      var available;
       if(screen.availWidth && screen.availHeight) {
         if(this.options.detectScreenOrientation) {
           available = (screen.availHeight > screen.availWidth) ? [screen.availHeight, screen.availWidth] : [screen.availWidth, screen.availHeight];
@@ -339,7 +349,7 @@
         s.innerHTML = testString;
         var defaultWidth = {};
         var defaultHeight = {};
-        for (var index in baseFonts) {
+        for (var index = 0, length = baseFonts.length; index < length; index++) {
             //get the default width for the three base fonts
             s.style.fontFamily = baseFonts[index];
             h.appendChild(s);
@@ -349,7 +359,7 @@
         }
         var detect = function (font) {
             var detected = false;
-            for (var index in baseFonts) {
+            for (var index = 0, l = baseFonts.length; index < l; index++) {
                 s.style.fontFamily = font + "," + baseFonts[index]; // name of the font along with the base font for fallback.
                 h.appendChild(s);
                 var matched = (s.offsetWidth !== defaultWidth[baseFonts[index]] || s.offsetHeight !== defaultHeight[baseFonts[index]]);
@@ -450,7 +460,8 @@
       }, this);
     },
     getIEPlugins: function () {
-      if(window.ActiveXObject){
+      var result = [];
+      if((Object.getOwnPropertyDescriptor && Object.getOwnPropertyDescriptor(window, "ActiveXObject")) || ("ActiveXObject" in window)) {
         var names = [
           "AcroPDF.PDF", // Adobe PDF reader 7+
           "Adodb.Stream",
@@ -476,17 +487,19 @@
           "rmocx.RealPlayer G2 Control.1"
         ];
         // starting to detect plugins in IE
-        return this.map(names, function(name){
-          try{
+        result = this.map(names, function(name) {
+          try {
             new ActiveXObject(name); // eslint-disable-no-new
             return name;
-          } catch(e){
+          } catch(e) {
             return null;
           }
         });
-      } else {
-        return [];
       }
+      if(navigator.plugins) {
+        result = result.concat(this.getRegularPlugins());
+      }
+      return result;
     },
     pluginsShouldBeSorted: function () {
       var should = false;
@@ -1184,6 +1197,6 @@
       return ("00000000" + (h1[0] >>> 0).toString(16)).slice(-8) + ("00000000" + (h1[1] >>> 0).toString(16)).slice(-8) + ("00000000" + (h2[0] >>> 0).toString(16)).slice(-8) + ("00000000" + (h2[1] >>> 0).toString(16)).slice(-8);
     }
   };
-  Fingerprint2.VERSION = "1.0.3";
+  Fingerprint2.VERSION = "1.1.1";
   return Fingerprint2;
 });
